@@ -20,7 +20,7 @@ class DecodeDictionary {
     d.put(index.getAndIncrement(), s);
   }
 
-  public String stringOf(int code) {
+  public String lookup(int code) {
     return d.get(code);
   }
 

@@ -1,31 +1,25 @@
 package org.reific.braid.lzw;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
+import java.io.StringReader;
+import java.io.StringWriter;
 
 public class LZW {
-
-  private final Charset outputCharset;
 
   private final String[] initialDictionaryEntries;
 
   public LZW(String... initialDictionaryEntries) {
-    this(StandardCharsets.UTF_8, initialDictionaryEntries);
-  }
-
-  public LZW(Charset outputCharset, String... initialDictionaryEntries) {
-    this.outputCharset = outputCharset;
     this.initialDictionaryEntries = initialDictionaryEntries;
   }
 
-  public void encode(InputStream input, OutputStream out) throws IOException {
+  public void encode(StringReader input, DataOutputStream out) throws IOException {
     EncodeDictionary dictionary = new EncodeDictionary(initialDictionaryEntries);
     String s = "";
-    while (input.available() > 0) {
-      char ch = (char) input.read();
+    int in = input.read();
+    while (in >= 0) {
+      char ch = (char) in;
       String sAndCh = s + ch;
       if (dictionary.contains(sAndCh))
       {
@@ -33,45 +27,32 @@ public class LZW {
       }
       else
       {
-        write(dictionary.codeOf(s), out);
+        out.writeInt(dictionary.codeOf(s));
         dictionary.add(sAndCh);
         s = new String(new char[] {ch});
       }
+      in = input.read();
     }
-    write(dictionary.codeOf(s), out);
+    out.writeInt(dictionary.codeOf(s));
   }
 
-  private void write(int i, OutputStream out) throws IOException {
-    out.write(String.valueOf(i).getBytes(outputCharset));
-  }
-
-  public void decode(InputStream in, OutputStream out) throws IOException {
+  public void decode(DataInputStream in, StringWriter out) throws IOException {
     DecodeDictionary dictionary = new DecodeDictionary(initialDictionaryEntries);
-
     String entry = null;
-    int prevCode = readCode(in);
-    write(dictionary.stringOf(prevCode), out);
+    int prevCode = in.readInt();
+    out.append(dictionary.lookup(prevCode));
     while (in.available() > 0)
     {
-      int currCode = readCode(in);
+      int currCode = in.readInt();
       if (!dictionary.containsCode(currCode)) {
         entry = entry + entry.charAt(0);
       }
       else {
-        entry = dictionary.stringOf(currCode);
+        entry = dictionary.lookup(currCode);
       }
-      write(entry, out);
-      dictionary.add(dictionary.stringOf(prevCode) + entry.charAt(0));
+      out.append(entry);
+      dictionary.add(dictionary.lookup(prevCode) + entry.charAt(0));
       prevCode = currCode;
     }
-  }
-
-  // TODO: there has to be a better way.
-  private int readCode(InputStream in) throws NumberFormatException, IOException {
-    return Integer.valueOf(new String(new char[] {(char) in.read()}));
-  }
-
-  private void write(String str, OutputStream out) throws IOException {
-    out.write(str.getBytes(outputCharset));
   }
 }

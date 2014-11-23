@@ -5,9 +5,11 @@ import static org.junit.Assert.assertNotSame;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -53,18 +55,15 @@ public class ExamplesTest {
   @Test
   public void testEncodeDecode() throws IOException {
     LZW lzw = new LZW("a", "b", "d", "n", "_");
-    String startStr = "abababab"; // "banana_bandana";
+    String startStr = "abababababababababababababababababab"; // "banana_bandana";
 
-    InputStream input = new ByteArrayInputStream(startStr.getBytes(StandardCharsets.UTF_8));
+    ByteArrayOutputStream encodedByteStream = new ByteArrayOutputStream();
+    lzw.encode(new StringReader(startStr), new DataOutputStream(encodedByteStream));
 
-    ByteArrayOutputStream encoded = new ByteArrayOutputStream();
-    lzw.encode(input, encoded);
+    ByteArrayInputStream forDecode = new ByteArrayInputStream(encodedByteStream.toByteArray());
+    StringWriter decodedResult = new StringWriter();
+    lzw.decode(new DataInputStream(forDecode), decodedResult);
 
-    ByteArrayInputStream forDecode = new ByteArrayInputStream(encoded.toByteArray());
-    ByteArrayOutputStream decodedResult = new ByteArrayOutputStream();
-    lzw.decode(forDecode, decodedResult);
-
-    String resultStr = new String(decodedResult.toByteArray(), StandardCharsets.UTF_8);
-    assertEquals(startStr, resultStr);
+    assertEquals(startStr, decodedResult.toString());
   }
 }
